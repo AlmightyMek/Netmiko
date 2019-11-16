@@ -17,9 +17,11 @@ net_connect.find_prompt()
 #output = net_connect.send_command('show ip int brief')
 #print (output)
 
-verification_test = open.()
+with open('verif_IOS') as f:
+    verification_test = f.read().splitlines()
+print(verification_test)
 
-config_commands = ['int loop 0', 'ip address 1.1.1.1 255.255.255.0']
+config_commands = [verification_test]
 output = net_connect.send_config_set(config_commands)
 print (output)
 net_connect.disconnect()
