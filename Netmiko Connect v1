@@ -1,0 +1,25 @@
+from netmiko import ConnectHandler
+
+cisco_ios = {
+    'device_type': 'cisco_ios_telnet',
+    #'host': 'telnet://513e-b-03-comm',
+    #'port': '2029',
+    #'host': '513E.B.06-3800-16.cisco.com',
+    'username': 'Mek',
+    'password': 'cisco',
+    'ip': '10.201.180.117'
+}
+
+
+net_connect = ConnectHandler(**cisco_ios)
+#net_connect.enable()
+net_connect.find_prompt()
+#output = net_connect.send_command('show ip int brief')
+#print (output)
+
+verification_test = open.()
+
+config_commands = ['int loop 0', 'ip address 1.1.1.1 255.255.255.0']
+output = net_connect.send_config_set(config_commands)
+print (output)
+net_connect.disconnect()
