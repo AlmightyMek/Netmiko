@@ -26,7 +26,7 @@ def get_non_strg_int(prompt):
             print("Sorry, I didn't understand that. Please enter an Interger!")
             continue
         except (KeyboardInterrupt, UnboundLocalError):
-            print('\nKeyboard Interrupt Dected Exiting ...')
+            print('\nKeyboard Interrupt Detected Exiting ...')
             exit()
         else:
             break
