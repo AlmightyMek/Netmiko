@@ -78,7 +78,7 @@ show_commands = verification_test
 output = ""
 
 #This loops through the items in the list 'show_commands';
-#Netmiko then sends the commands to the device with the .send_command() methid
+#Netmiko then sends the commands to the device with the .send_command() method
 
 for i in range (len(show_commands)):
     print(net_connect.find_prompt())
