@@ -18,10 +18,23 @@ __author_email__ = 'enwangwu@cisco.com'
 
 #This is to verify we get an int for user_input_PORT
 
-def get_non_strg_int(prompt):
+'''
+Verifying Host Input
+
+def verify_host_input(prompt_HOST):
+    Calo_Locations = ["513E"]
+    value_Host = strg(input(prompt_HOST))
+    try:
+        if any (value_Host in Calo_Locations == True
+            return prompt_HOST
+    else:
+        print('Please enter a vaild location (513E, etc...)')
+'''
+
+def get_non_strg_int(prompt_PORT):
     while True:
         try:
-            value = int(input(prompt))
+            value_PORT = int(input(prompt_PORT))
         except ValueError:
             print("Sorry, I didn't understand that. Please enter an Interger!")
             continue
@@ -30,14 +43,16 @@ def get_non_strg_int(prompt):
             exit()
         else:
             break
-    return value
+    return value_PORT
 
 #Get user input to make the telnet connection
-user_input_HOST = input("Enter the name fo the COMM Server: ")
+user_input_HOST = input("Enter the name of the COMM Server: ")
 user_input_PORT = get_non_strg_int("Enter the COMM Port of the host: ")
+user_input_PING = input("Enter the name of the interface you want to ping the FTP server from: ")
 
 HOST = user_input_HOST
 PORT = user_input_PORT
+PING = user_input_PING
 
 #Here we are parsing in device information needed for
 #Netmiko to make a telnet connection
@@ -75,6 +90,7 @@ f.close()
 
 #Here we are storing the list of commands from the txt file in a variable
 show_commands = verification_test
+send_ping = ('ping vrf ' + user_input_PING + ' 10.88.7.12')
 output = ""
 
 #This loops through the items in the list 'show_commands';
@@ -84,7 +100,13 @@ for i in range (len(show_commands)):
     print(net_connect.find_prompt())
     output = net_connect.send_command(show_commands[i])
     print (output + '\n')
+
+print(net_connect.find_prompt())
+output = net_connect.send_command(send_ping)
+print(output + '\n')
+
 net_connect.disconnect()
 #output = net_connect.send_command(show_commands)
 
 print("Verification Complete!")
+exit()
