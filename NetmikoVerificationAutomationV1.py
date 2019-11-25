@@ -1,112 +1,81 @@
-from netmiko import ConnectHandler
+import netmiko
+import GetUserInput
+import signal
+import sys
+import json
+
 '''
 Netmiko Documentation
 
 https://github.com/ktbyers/netmiko/blob/develop/README.md
 https://pynet.twb-tech.com/blog/automation/netmiko.html
 ========================================================
+Grellem Youtube Script
+https://github.com/grelleum/youtube-network-automation/blob/
+master/08.Completing_Command_Runner/v1.Output_to_Screen/cmdrunner.py#L23
+========================================================
 
 Purpose of this script:
 
 This script connects to an IOS devie, opens a command file,
-Runs the show commands in that file, and then prints the output
+then excutes a ping to the FTP Server
+
+Then it Runs the show commands in that file, and then prints the output
 ========================================================
 
 __author__ = 'Emeka Nwangwu'
 __author_email__ = 'enwangwu@cisco.com'
 '''
 
-#This is to verify we get an int for user_input_PORT
+#Get user input from GetUserInput.py file to make the telnet connection
 
-'''
-Verifying Host Input
+commands, devices = GetUserInput.get_files()
 
-def verify_host_input(prompt_HOST):
-    Calo_Locations = ["513E"]
-    value_Host = strg(input(prompt_HOST))
-    try:
-        if any (value_Host in Calo_Locations == True
-            return prompt_HOST
-    else:
-        print('Please enter a vaild location (513E, etc...)')
-'''
+#Catching Netmiko netmiko_exceptions as well as Python Exceptions
 
-def get_non_strg_int(prompt_PORT):
-    while True:
-        try:
-            value_PORT = int(input(prompt_PORT))
-        except ValueError:
-            print("Sorry, I didn't understand that. Please enter an Interger!")
-            continue
-        except (KeyboardInterrupt, UnboundLocalError):
-            print('\nKeyboard Interrupt Detected Exiting ...')
-            exit()
-        else:
-            break
-    return value_PORT
+signal.signal(signal.SIGINT, signal.SIG_DFL)  # KeyboardInterrupt: Ctrl-C
 
-#Get user input to make the telnet connection
-user_input_HOST = input("Enter the name of the COMM Server: ")
-user_input_PORT = get_non_strg_int("Enter the COMM Port of the host: ")
-user_input_PING = input("Enter the name of the interface you want to ping the FTP server from: ")
+netmiko_exceptions = (netmiko.ssh_exception.NetMikoTimeoutException,
+                      netmiko.ssh_exception.NetMikoAuthenticationException)
 
-HOST = user_input_HOST
-PORT = user_input_PORT
-PING = user_input_PING
+#This will open the config file and print the commands
 
-#Here we are parsing in device information needed for
-#Netmiko to make a telnet connection
+print('\nPerfoming device verification with the following commands...\n')
 
-cisco_ios = {
-    'device_type': 'cisco_ios_telnet',
-    #'username': 'Mek',
-    #'password': 'cisco',
-    'host': HOST,
-    'port': PORT,
-    #'ip': '10.201.180.117'
-    #'secret': ''
-}
-
-#This is to setup the connection to the devices
-#Be sure to pass the devices name into the ConnectHandler()
-net_connect = ConnectHandler(**cisco_ios)
-
-#This will find then print the prompt of the device
-prompt = net_connect.find_prompt()
-print (prompt + '\n')
-
-#This will open the config file then parse the lines into a list
-#then we close the file with f.close()
-
-with open('Verifications_IOS.txt') as f:
-    verification_test = f.read().splitlines()
-
-print('Perfoming device verification with the following commands...\n')
-
-for k in range(len(verification_test)):
-    print(verification_test[k])
+for k in range(len(commands)):
+    print(commands[k])
 print()
-f.close()
 
-#Here we are storing the list of commands from the txt file in a variable
-show_commands = verification_test
-send_ping = ('ping vrf ' + user_input_PING + ' 10.88.7.12')
-output = ""
+#This is to setup the connection to the devices and loop through the commands
+#Be sure to pass the devices nto the ConnectHandler()
 
-#This loops through the items in the list 'show_commands';
-#Netmiko then sends the commands to the device with the .send_command() method
+for device in devices:
+    try:
+        print('~' * 79)
+        net_connect = netmiko.base_connection.TelnetConnection(**device)
+        print('Connecting to device: ' + (net_connect.set_base_prompt()))
+        #PING = GetUserInput.get_ping()[0]
+        #send_ping = 'ping vrf {} 10.88.7.12'.format(PING)
 
-for i in range (len(show_commands)):
-    print(net_connect.find_prompt())
-    output = net_connect.send_command(show_commands[i])
-    print (output + '\n')
+        for command in commands:
+            print('## Output of ' + command)
+            print(net_connect.set_base_prompt() + '#')
+            print(net_connect.send_command(command))
+            print()
 
-print(net_connect.find_prompt())
-output = net_connect.send_command(send_ping)
-print(output + '\n')
+        #if PING not in GetUserInput.get_ping()[1]:
+            #print(net_connect.set_base_prompt() + '#')
+            #print(net_connect.send_command(send_ping))
 
-net_connect.disconnect()
-#output = net_connect.send_command(show_commands)
+        #else:
+            #pass
 
-print("Verification Complete!")
-exit()
+        net_connect.disconnect()
+        print("\nVerification Complete!")
+
+    except ConnectionRefusedError:
+        print("No connection could be made because the target machine actively refused it. \
+        Please clear the console lines of the devices and try again.")
+        exit()
+    except netmiko_exceptions as e:
+        print('Failed to connect to ', device['host'], e)
