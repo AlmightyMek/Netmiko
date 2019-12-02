@@ -71,7 +71,7 @@ def device_verification():
             #PING = GetUserInput.get_ping()[0]
             #send_ping = 'ping vrf {} 10.88.7.12'.format(PING)
 
-            for command in commands:
+            for command in get_files()[0]:
                 print('## Output of ' + command)
                 print(net_connect.set_base_prompt() + '#')
                 print(net_connect.send_command(get_files()[0]))
