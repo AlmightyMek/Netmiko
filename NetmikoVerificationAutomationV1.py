@@ -87,12 +87,13 @@ def device_verification():
             net_connect.disconnect()
             print("\nVerification Complete!")
 
-    except ConnectionRefusedError:
-        print("No connection could be made because the target machine actively refused it. \
+        except ConnectionRefusedError:
+            print("No connection could be made because the target machine actively refused it. \
         Please clear the console lines of the devices and try again.")
-        exit()
-    except netmiko_exceptions as e:
-        print('Failed to connect to ', device['host'], e)
+            exit()
+
+        except netmiko_exceptions as e:
+            print('Failed to connect to ', device['host'], e)
 
 def main():
     get_files()
