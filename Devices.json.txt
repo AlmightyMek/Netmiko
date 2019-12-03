@@ -1,0 +1,12 @@
+[
+   { 
+        "device_type": "cisco_ios_telnet",
+	"host": "513E-B-02-COMM",
+	"port": "2059"
+    },
+{
+        "device_type": "cisco_ios_telnet",
+	"host": "513E-B-03-COMM",
+	"port": "2053",
+}
+]

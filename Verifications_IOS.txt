@@ -1,0 +1,3 @@
+show ver | inc image
+show ip int br | inc up
+show cdp ne

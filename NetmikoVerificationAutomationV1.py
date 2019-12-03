@@ -47,7 +47,7 @@ def get_files():
         cmd_file.close()
 
     with open (args.devices) as dev_file:
-        devices = dev_file.readlines()
+        devices = json.load(dev_file)
         dev_file.close()
 
     return commands, devices
@@ -58,6 +58,8 @@ def exception_catch():
 
     netmiko_exceptions = (netmiko.ssh_exception.NetMikoTimeoutException,
                       netmiko.ssh_exception.NetMikoAuthenticationException)
+
+    return netmiko_exceptions
 
 def device_verification():
     #This is to setup the connection to the devices and loop through the commands
@@ -74,7 +76,7 @@ def device_verification():
             for command in get_files()[0]:
                 print('## Output of ' + command)
                 print(net_connect.set_base_prompt() + '#')
-                print(net_connect.send_command(get_files()[0]))
+                print(net_connect.send_command(command))
                 print()
 
             #if PING not in GetUserInput.get_ping()[1]:
@@ -92,7 +94,7 @@ def device_verification():
         Please clear the console lines of the devices and try again.")
             exit()
 
-        except netmiko_exceptions as e:
+        except exception_catch()[0] as e:
             print('Failed to connect to ', device['host'], e)
 
 def main():
