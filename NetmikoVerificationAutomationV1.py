@@ -43,13 +43,18 @@ def get_files():
     parser.add_argument('commands', action ='store',
     help = 'Location of the command file')
 
-    parser.add_argument('--vrf', action = 'store_true', help =
-    'Ping RCDNs FTP Server 10.88.7.12 using the Managment VRF, otherwise the default VRF will be used')
+    #This is to make sure --vrf and --ping are not both used
+    groups = parser.add_mutually_exclusive_group(required=False)
 
-    parser.add_argument('--ping',action ='store_true', help =
+    groups.add_argument('--vrf', action = 'store_true', help =
+    'Ping RCDNs FTP Server 10.88.7.12 using the Managment VRF, otherwise the default VRF will be used with --ping')
+
+    groups.add_argument('--ping',action ='store_true', help =
     'Ping 10.88.7.12, the RCDN FTP Server')
 
     args = parser.parse_args()
+    #mutal_error = parser.error('Cannot pass both --vrf and --ping, please choose one')
+
     #This will open the files parsed and store them in variables
     with open (args.commands) as cmd_file:
         commands = cmd_file.readlines()
@@ -60,8 +65,9 @@ def get_files():
         dev_file.close()
 
         vrf = args.vrf
+        ping = args.ping
 
-    return commands, devices, vrf
+    return commands, devices, vrf, ping
 
 def exception_catch():
     #Catching Netmiko netmiko_exceptions as well as Python Exceptions
@@ -86,19 +92,18 @@ def device_verification():
         try:
             print('~' * 79)
             net_connect = netmiko.base_connection.TelnetConnection(**device)
+            host_name = net_connect.set_base_prompt()
 
-            #send_ping = 'ping vrf {} 10.88.7.12'
+            print('\nConnecting to device: ' + host_name)
 
-
-            print('Connecting to device: ' + (net_connect.set_base_prompt()))
-            #PING = GetUserInput.get_ping()[0]
-            #send_ping = 'ping vrf {} 10.88.7.12'.format(PING)
 
             for command in get_files()[0]:
                 print('## Output of ' + command)
                 print(net_connect.set_base_prompt() + '#')
                 print(net_connect.send_command(command))
                 print()
+
+                #If vrf == True and --ping == False, we'll ping with the Mgmt Vrf for IOS
 
             if any (i['device_type'] == 'cisco_ios_telnet' and get_files()[2]
             == True for i in get_files()[1]):
@@ -110,11 +115,16 @@ def device_verification():
                 print(net_connect.set_base_prompt() + '#')
                 print(send_ping_vrf)
 
-            #else:
-                #pass
+                #If vrf == False and --ping == True, we'll ping with the default Vrf for IOS
+
+            elif get_files()[2]  == False and get_files()[3] == True:
+                print('## Output of ping 10.88.7.12')
+                print(net_connect.set_base_prompt() + '#')
+                send_ping_default = (net_connect.send_command('ping 10.88.7.12'))
+                print(send_ping_default)
 
             net_connect.disconnect()
-            print("\nVerification Complete!")
+            print("\nVerification Complete for {}".format(host_name) + "\n")
 
         except ConnectionRefusedError:
             print("No connection could be made because the target machine actively refused it. \

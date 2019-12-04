@@ -1,0 +1,1 @@
+set NET_TEXTFSM = C:\Users\enwangwu\lab-automation\ntc-templates\templates
