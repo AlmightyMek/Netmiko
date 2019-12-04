@@ -1,5 +1,4 @@
 import netmiko
-import GetUserInput
 import signal
 import sys
 import json
@@ -80,13 +79,8 @@ def exception_catch():
 
 
 def device_verification():
-    #This is to setup the connection to the devices and loop through the commands
+    #This is the main func to setup the connection to the devices and loop through the commands
     #Be sure to pass the devices into the TelnetConnection()
-
-    #Path for the NET_TEXTFSM templates
-
-    #This will sepfiic how we ping the FTP server (10.88.7.12) based on the Parse
-
 
     for device in get_files()[1]:
         try:
@@ -96,6 +90,7 @@ def device_verification():
 
             print('\nConnecting to device: ' + host_name)
 
+            #Here we loop through the command file and print the output
 
             for command in get_files()[0]:
                 print('## Output of ' + command)
