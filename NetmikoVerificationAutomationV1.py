@@ -4,6 +4,7 @@ import signal
 import sys
 import json
 import argparse
+import os
 
 '''
 Netmiko Documentation
@@ -32,13 +33,21 @@ __author_email__ = 'enwangwu@cisco.com'
 # the filse to make the telnet connections with Netmiko
 
 def get_files():
+
     parser = argparse.ArgumentParser(description='''Script to connect
     to cisco devices and run show commands''')
 
     parser.add_argument('devices', action='store',
     help = 'Location of device file')
-    parser.add_argument('commands', action='store',
+
+    parser.add_argument('commands', action ='store',
     help = 'Location of the command file')
+
+    parser.add_argument('--vrf', action = 'store_true', help =
+    'Ping RCDNs FTP Server 10.88.7.12 using the Managment VRF, otherwise the default VRF will be used')
+
+    parser.add_argument('--ping',action ='store_true', help =
+    'Ping 10.88.7.12, the RCDN FTP Server')
 
     args = parser.parse_args()
     #This will open the files parsed and store them in variables
@@ -50,7 +59,9 @@ def get_files():
         devices = json.load(dev_file)
         dev_file.close()
 
-    return commands, devices
+        vrf = args.vrf
+
+    return commands, devices, vrf
 
 def exception_catch():
     #Catching Netmiko netmiko_exceptions as well as Python Exceptions
@@ -61,14 +72,24 @@ def exception_catch():
 
     return netmiko_exceptions
 
+
 def device_verification():
     #This is to setup the connection to the devices and loop through the commands
     #Be sure to pass the devices into the TelnetConnection()
+
+    #Path for the NET_TEXTFSM templates
+
+    #This will sepfiic how we ping the FTP server (10.88.7.12) based on the Parse
+
 
     for device in get_files()[1]:
         try:
             print('~' * 79)
             net_connect = netmiko.base_connection.TelnetConnection(**device)
+
+            #send_ping = 'ping vrf {} 10.88.7.12'
+
+
             print('Connecting to device: ' + (net_connect.set_base_prompt()))
             #PING = GetUserInput.get_ping()[0]
             #send_ping = 'ping vrf {} 10.88.7.12'.format(PING)
@@ -79,9 +100,15 @@ def device_verification():
                 print(net_connect.send_command(command))
                 print()
 
-            #if PING not in GetUserInput.get_ping()[1]:
-                #print(net_connect.set_base_prompt() + '#')
-                #print(net_connect.send_command(send_ping))
+            if any (i['device_type'] == 'cisco_ios_telnet' and get_files()[2]
+            == True for i in get_files()[1]):
+                get_vrf = (net_connect.send_command('show vrf', use_textfsm=True))
+                mgmt_vrf = get_vrf[0]['name']
+
+                send_ping_vrf = (net_connect.send_command('ping vrf {} 10.88.7.12'.format(mgmt_vrf)))
+                print('## Output of ' + 'ping vrf {} 10.88.7.12'.format(mgmt_vrf))
+                print(net_connect.set_base_prompt() + '#')
+                print(send_ping_vrf)
 
             #else:
                 #pass
@@ -97,10 +124,12 @@ def device_verification():
         except exception_catch()[0] as e:
             print('Failed to connect to ', device['host'], e)
 
+
 def main():
     get_files()
     exception_catch()
     device_verification()
+
 
 if __name__ ==  '__main__':
     main()

@@ -7,6 +7,6 @@
 {
         "device_type": "cisco_ios_telnet",
 	"host": "513E-B-03-COMM",
-	"port": "2053",
+	"port": "2053"
 }
 ]
