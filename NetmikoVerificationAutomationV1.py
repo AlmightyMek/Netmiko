@@ -103,7 +103,7 @@ def device_verification():
                 print(net_connect.send_command(command))
                 print()
 
-                #If vrf == True and --ping == False, we'll ping with the Mgmt Vrf for IOS
+            #If vrf == True and --ping == False, we'll ping with the Mgmt Vrf for IOS
 
             if any (i['device_type'] == 'cisco_ios_telnet' and get_files()[2]
             == True for i in get_files()[1]):
@@ -115,7 +115,7 @@ def device_verification():
                 print(net_connect.set_base_prompt() + '#')
                 print(send_ping_vrf)
 
-                #If vrf == False and --ping == True, we'll ping with the default Vrf for IOS
+            #If vrf == False and --ping == True, we'll ping with the default Vrf for IOS
 
             elif get_files()[2]  == False and get_files()[3] == True:
                 print('## Output of ping 10.88.7.12')
