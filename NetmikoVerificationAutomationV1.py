@@ -4,6 +4,8 @@ import sys
 import json
 import argparse
 import os
+from datetime import datetime
+from multiprocessing import Process
 
 '''
 Netmiko Documentation
@@ -78,11 +80,11 @@ def exception_catch():
     return netmiko_exceptions
 
 
-def device_verification():
+def device_verification(commands, devices, vrf, ping):
     #This is the main func to setup the connection to the devices and loop through the commands
     #Be sure to pass the devices into the TelnetConnection()
 
-    for device in get_files()[1]:
+    for device in devices:
         try:
             print('~' * 79)
             net_connect = netmiko.base_connection.TelnetConnection(**device)
@@ -92,49 +94,67 @@ def device_verification():
 
             #Here we loop through the command file and print the output
 
-            for command in get_files()[0]:
+            for command in commands:
                 print('## Output of ' + command)
                 print(net_connect.set_base_prompt() + '#')
                 print(net_connect.send_command(command))
                 print()
 
-            #If vrf == True and --ping == False, we'll ping with the Mgmt Vrf for IOS
+                #If vrf == True and --ping == False, we'll ping with the Mgmt Vrf for IOS
+                #We call the ping_vrf() func for the command to run
 
-            if any (i['device_type'] == 'cisco_ios_telnet' and get_files()[2]
-            == True for i in get_files()[1]):
+            if any (i['device_type'] == 'cisco_ios_telnet' and vrf == True for i in devices):
+
                 get_vrf = (net_connect.send_command('show vrf', use_textfsm=True))
-                mgmt_vrf = get_vrf[0]['name']
+                output_send_ping_vrf = net_connect.send_command(ping_vrf(get_vrf))
 
-                send_ping_vrf = (net_connect.send_command('ping vrf {} 10.88.7.12'.format(mgmt_vrf)))
-                print('## Output of ' + 'ping vrf {} 10.88.7.12'.format(mgmt_vrf))
+                print('## Output of ' + 'ping vrf {} 10.88.7.12'.format(get_vrf[0]['name']))
                 print(net_connect.set_base_prompt() + '#')
-                print(send_ping_vrf)
+                print(output_send_ping_vrf)
 
-            #If vrf == False and --ping == True, we'll ping with the default Vrf for IOS
+                #If vrf == False and --ping == True, we'll ping with the default Vrf for IOS
 
-            elif get_files()[2]  == False and get_files()[3] == True:
+            elif  vrf == False and ping == True:
+
                 print('## Output of ping 10.88.7.12')
                 print(net_connect.set_base_prompt() + '#')
-                send_ping_default = (net_connect.send_command('ping 10.88.7.12'))
-                print(send_ping_default)
+                output_send_ping_default = (net_connect.send_command('ping 10.88.7.12'))
+                print(output_send_ping_default)
 
             net_connect.disconnect()
             print("\nVerification Complete for {}".format(host_name) + "\n")
 
         except ConnectionRefusedError:
-            print("No connection could be made because the target machine actively refused it. \
-        Please clear the console lines of the devices and try again.")
+            print('''No connection could be made because the target machine actively refused it.\n
+            Please clear the console lines of the devices and try again''')
             exit()
 
         except exception_catch()[0] as e:
             print('Failed to connect to ', device['host'], e)
 
+            return
+
+def ping_vrf(get_vrf):
+    mgmt_vrf = get_vrf[0]['name']
+    send_ping_vrf = ('ping vrf {} 10.88.7.12'.format(mgmt_vrf))
+
+    return send_ping_vrf
+
 
 def main():
+    startTime = datetime.now()
+
     get_files()
     exception_catch()
-    device_verification()
+    device_verification(get_files()[0],get_files()[1],get_files()[2],get_files()[3])
+    #proc = Process(target=device_verification, args=(get_files()[0],get_files()[1],get_files()[2],get_files()[3]))
+    #proc.start()
+    total_time = (datetime.now() - startTime)
+    print()
 
+    print('~' * 79)
+    print('Script took {}'.format(total_time) + ' to complete')
+    print('~' * 79)
 
 if __name__ ==  '__main__':
     main()
