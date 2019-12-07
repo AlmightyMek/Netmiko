@@ -132,7 +132,7 @@ def device_verification(commands, devices, vrf, ping):
         except exception_catch()[0] as e:
             print('Failed to connect to ', device['host'], e)
 
-            return
+            return get_vrf
 
 def ping_vrf(get_vrf):
     mgmt_vrf = get_vrf[0]['name']
