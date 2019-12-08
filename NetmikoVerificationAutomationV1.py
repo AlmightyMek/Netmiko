@@ -5,7 +5,7 @@ import json
 import argparse
 import os
 from datetime import datetime
-from multiprocessing import Process
+import concurrent.futures
 
 '''
 Netmiko Documentation
@@ -80,30 +80,32 @@ def exception_catch():
     return netmiko_exceptions
 
 
-def device_verification(commands, devices, vrf, ping):
+def device_verification(devices):
     #This is the main func to setup the connection to the devices and loop through the commands
     #Be sure to pass the devices into the TelnetConnection()
 
-    for device in devices:
         try:
             print('~' * 79)
-            net_connect = netmiko.base_connection.TelnetConnection(**device)
+            net_connect = netmiko.base_connection.TelnetConnection(**devices)
             host_name = net_connect.set_base_prompt()
 
             print('\nConnecting to device: ' + host_name)
 
             #Here we loop through the command file and print the output
+            for command in get_files()[0]:
+                host_name = net_connect.set_base_prompt()
+                verification_data = net_connect.send_command(command)
 
-            for command in commands:
-                print('## Output of ' + command)
-                print(net_connect.set_base_prompt() + '#')
-                print(net_connect.send_command(command))
-                print()
+            verification_output_filename = 'verification-{}'.format(devices['ip'])
+            print('Writing output of Show commands to ', + verification_output_filename)
+
+            with open(verification_output_filename + '.txt', 'w') as verification_file:
+                verification_data = verification_file.write(verification_data)
 
                 #If vrf == True and --ping == False, we'll ping with the Mgmt Vrf for IOS
                 #We call the ping_vrf() func for the command to run
 
-            if any (i['device_type'] == 'cisco_ios_telnet' and vrf == True for i in devices):
+            if any (i['device_type'] == 'cisco_ios_telnet' and get_files()[2] == True for i in devices):
 
                 get_vrf = (net_connect.send_command('show vrf', use_textfsm=True))
                 output_send_ping_vrf = net_connect.send_command(ping_vrf(get_vrf))
@@ -114,7 +116,7 @@ def device_verification(commands, devices, vrf, ping):
 
                 #If vrf == False and --ping == True, we'll ping with the default Vrf for IOS
 
-            elif  vrf == False and ping == True:
+            elif get_files()[2] == False and get_files()[3] == True:
 
                 print('## Output of ping 10.88.7.12')
                 print(net_connect.set_base_prompt() + '#')
@@ -146,9 +148,11 @@ def main():
 
     get_files()
     exception_catch()
-    device_verification(get_files()[0],get_files()[1],get_files()[2],get_files()[3])
-    #proc = Process(target=device_verification, args=(get_files()[0],get_files()[1],get_files()[2],get_files()[3]))
-    #proc.start()
+
+    #This will open mulitple process for the device_verification func
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        executor.map(device_verification, get_files()[1])
+
     total_time = (datetime.now() - startTime)
     print()
 
