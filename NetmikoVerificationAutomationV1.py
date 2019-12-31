@@ -21,7 +21,7 @@ master/08.Completing_Command_Runner/v1.Output_to_Screen/cmdrunner.py#L23
 Purpose of this script:
 
 This script connects to an IOS devie, opens a command file,
-then excutes a ping to the FTP Server
+then excutes a ping to the FTP Server in requsted
 
 Then it Runs the show commands in that file, and then prints the output
 ========================================================
@@ -47,8 +47,8 @@ def get_files():
     #This is to make sure --vrf and --ping are not both used
     groups = parser.add_mutually_exclusive_group(required=False)
 
-    groups.add_argument('--vrf', action = 'store_true', help =
-    'Ping RCDNs FTP Server 10.88.7.12 using the Managment VRF, otherwise the default VRF will be used with --ping')
+    #groups.add_argument('--vrf', action = 'store_true', help =
+    #'Ping RCDNs FTP Server 10.88.7.12 using the Managment VRF, otherwise the default VRF will be used with --ping')
 
     groups.add_argument('--ping',action ='store_true', help =
     'Ping 10.88.7.12, the RCDN FTP Server')
@@ -65,10 +65,10 @@ def get_files():
         devices = json.load(dev_file)
         dev_file.close()
 
-        vrf = args.vrf
+        #vrf = args.vrf
         ping = args.ping
 
-    return commands, devices, vrf, ping
+    return commands, devices, ping
 
 def exception_catch():
     #Catching Netmiko netmiko_exceptions as well as Python Exceptions
@@ -79,6 +79,11 @@ def exception_catch():
 
     return netmiko_exceptions
 
+def ping_vrf(get_vrf):
+    mgmt_vrf = get_vrf[0]['name']
+    send_ping_vrf = ('ping vrf {} 10.88.7.12'.format(mgmt_vrf))
+
+    return send_ping_vrf
 
 def device_verification(devices):
     #This is the main func to setup the connection to the devices and loop through the commands
@@ -92,39 +97,22 @@ def device_verification(devices):
             print('\nConnecting to device: ' + host_name)
 
             #Here we loop through the command file and print the output
-            for command in get_files()[0]:
-                host_name = net_connect.set_base_prompt()
-                verification_data = net_connect.send_command(command)
-
-            verification_output_filename = 'verification-{}'.format(devices['ip'])
-            print('Writing output of Show commands to ', + verification_output_filename)
+            verification_output_filename = ('verification-{}'.format(host_name))
+            print('Writing the output of the show commands to ' + verification_output_filename + '.txt')
+            print()
 
             with open(verification_output_filename + '.txt', 'w') as verification_file:
-                verification_data = verification_file.write(verification_data)
+                for command in get_files()[0]:
+                    verification_file.write('## Output of ' + command + '\n\n')
+                    verification_file.write(net_connect.send_command(command) + '\n\n')
 
-                #If vrf == True and --ping == False, we'll ping with the Mgmt Vrf for IOS
-                #We call the ping_vrf() func for the command to run
+                #ping_logic handels the commands needed to ping the FTP server
 
-            if any (i['device_type'] == 'cisco_ios_telnet' and get_files()[2] == True for i in devices):
-
-                get_vrf = (net_connect.send_command('show vrf', use_textfsm=True))
-                output_send_ping_vrf = net_connect.send_command(ping_vrf(get_vrf))
-
-                print('## Output of ' + 'ping vrf {} 10.88.7.12'.format(get_vrf[0]['name']))
-                print(net_connect.set_base_prompt() + '#')
-                print(output_send_ping_vrf)
-
-                #If vrf == False and --ping == True, we'll ping with the default Vrf for IOS
-
-            elif get_files()[2] == False and get_files()[3] == True:
-
-                print('## Output of ping 10.88.7.12')
-                print(net_connect.set_base_prompt() + '#')
-                output_send_ping_default = (net_connect.send_command('ping 10.88.7.12'))
-                print(output_send_ping_default)
+                verification_file.write('## Output of ' + 'ping 10.88.7.12' '\n\n')
+                verification_file.write(ping_logic(net_connect))
 
             net_connect.disconnect()
-            print("\nVerification Complete for {}".format(host_name) + "\n")
+            print("Verification Complete for {}".format(host_name) + "\n")
 
         except ConnectionRefusedError:
             print('''No connection could be made because the target machine actively refused it.\n
@@ -134,13 +122,27 @@ def device_verification(devices):
         except exception_catch()[0] as e:
             print('Failed to connect to ', device['host'], e)
 
-            return get_vrf
+            return net_connect
 
-def ping_vrf(get_vrf):
-    mgmt_vrf = get_vrf[0]['name']
-    send_ping_vrf = ('ping vrf {} 10.88.7.12'.format(mgmt_vrf))
 
-    return send_ping_vrf
+def ping_logic(net_connect,ping=get_files()[2]):
+
+    #With the list comp we are checking for the IOS device type and the running the commands accordingly
+    #Will need to add slighty differnet commands depending on OS
+
+    if any (d['device_type'] == 'cisco_ios_telnet' for d in get_files()[1]):
+
+        #ping_vrf will handle the vrf commands
+
+        get_vrf = net_connect.send_command('show vrf', use_textfsm=True)
+        output_send_ping_vrf = net_connect.send_command(ping_vrf(get_vrf))
+        return output_send_ping_vrf
+
+        #Otherwise we ping via the default vrf
+
+    if any ('0/') in output_send_ping_vrf:
+        output_send_ping_default = net_connect.send_command('ping 10.88.7.12')
+        return output_send_ping_default
 
 
 def main():
@@ -149,13 +151,14 @@ def main():
     get_files()
     exception_catch()
 
-    #This will open mulitple process for the device_verification func
+    #This will open mulitple threads for the device_verification func and loop through the devices
+
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        executor.map(device_verification, get_files()[1])
+        f1 = executor.map(device_verification, get_files()[1])
 
     total_time = (datetime.now() - startTime)
     print()
-
+    
     print('~' * 79)
     print('Script took {}'.format(total_time) + ' to complete')
     print('~' * 79)
