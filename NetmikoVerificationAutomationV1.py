@@ -39,10 +39,10 @@ def get_files():
     to cisco devices and run show commands''')
 
     parser.add_argument('devices', action='store',
-    help = 'Location of device file')
+    help = 'Name of the device file')
 
     parser.add_argument('commands', action ='store',
-    help = 'Location of the command file')
+    help = 'Name of the command file')
 
     #This is to make sure --vrf and --ping are not both used
     groups = parser.add_mutually_exclusive_group(required=False)
@@ -102,14 +102,17 @@ def device_verification(devices):
             print()
 
             with open(verification_output_filename + '.txt', 'w') as verification_file:
-                for command in get_files()[0]:
+                for command in get_files()[0]: #Commands
                     verification_file.write('## Output of ' + command + '\n\n')
                     verification_file.write(net_connect.send_command(command) + '\n\n')
 
-                #ping_logic handels the commands needed to ping the FTP server
 
-                verification_file.write('## Output of ' + 'ping 10.88.7.12' '\n\n')
-                verification_file.write(ping_logic(net_connect))
+                #ping_logic handels the commands needed to ping the FTP server
+                #If ping == True then we'll call the ping_logic func
+                     #Ping
+                if get_files()[2] == True:
+                    verification_file.write('## Output of ' + 'ping 10.88.7.12' '\n\n')
+                    verification_file.write(ping_logic(net_connect))
 
             net_connect.disconnect()
             print("Verification Complete for {}".format(host_name) + "\n")
@@ -128,7 +131,7 @@ def device_verification(devices):
 def ping_logic(net_connect,ping=get_files()[2]):
 
     #With the list comp we are checking for the IOS device type and the running the commands accordingly
-    #Will need to add slighty differnet commands depending on OS
+    #Will need to add slighty differnet commands depending on the OS
 
     if any (d['device_type'] == 'cisco_ios_telnet' for d in get_files()[1]):
 
@@ -158,7 +161,7 @@ def main():
 
     total_time = (datetime.now() - startTime)
     print()
-    
+
     print('~' * 79)
     print('Script took {}'.format(total_time) + ' to complete')
     print('~' * 79)
