@@ -1,3 +1,0 @@
-show ver | inc image
-show int br | inc up
-show cdp ne
