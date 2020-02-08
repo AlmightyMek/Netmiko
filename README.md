@@ -1,6 +1,4 @@
 # network-automation
-Calo Lab Automation 
-
 
 This scripts connnect to a Cisco device from a file, (other vendros should work) using netmiko, then run the commands from a file. 
 
