@@ -98,14 +98,16 @@ def device_verification(devices):
 
             #Here we loop through the command file and print the output
             verification_output_filename = ('verification-{}'.format(host_name))
-            print('Writing the output of the show commands to ' + verification_output_filename + '.txt')
+            print('Writing output to ' + verification_output_filename + '.txt')
             print()
 
             with open(verification_output_filename + '.txt', 'w') as verification_file:
                 for command in get_files()[0]: #Commands
-                    verification_file.write('## Output of ' + command + '\n\n')
-                    verification_file.write(net_connect.send_command(command) + '\n\n')
-
+                    command_stripped = command.strip('\n') #Clean up the file output by remoing the back slash characters
+                    verification_file.write('## Output of ' + command_stripped + ' ' + '[' + host_name + ']')
+                    verification_file.write("\n")
+                    verification_file.write(net_connect.send_command(command_stripped))
+                    verification_file.write("\n")
 
                 #ping_logic handels the commands needed to ping the FTP server
                 #If ping == True then we'll call the ping_logic func
